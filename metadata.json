@@ -1,0 +1,6 @@
+{
+  "name": "FlowDay Planner",
+  "description": "An offline-first Android daily planner and routine manager built with Kotlin and Jetpack Compose, designed for fast task entry, flexible routines, focus timers, and low-friction productivity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
