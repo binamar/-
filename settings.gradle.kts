@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "FlowDay-Planner"
+rootProject.name = "StreamGrab"
 
 include(":app")

@@ -2,70 +2,80 @@ package com.example.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.data.local.FlowDayDatabase
-import com.example.data.local.FocusDao
-import com.example.data.local.RoutineDao
-import com.example.data.local.TaskDao
-import com.example.data.local.TemplateDao
-import com.example.data.repository.FocusRepositoryImpl
-import com.example.data.repository.RoutineRepositoryImpl
+import com.example.data.local.DownloadDao
+import com.example.data.local.HistoryDao
+import com.example.data.local.StreamGrabDatabase
+import com.example.data.repository.DownloadRepositoryImpl
+import com.example.data.repository.HistoryRepositoryImpl
+import com.example.data.repository.ScraperRepositoryImpl
 import com.example.data.repository.SettingsRepositoryImpl
-import com.example.data.repository.TaskRepositoryImpl
-import com.example.domain.repository.FocusRepository
-import com.example.domain.repository.RoutineRepository
+import com.example.domain.repository.DownloadRepository
+import com.example.domain.repository.HistoryRepository
+import com.example.domain.repository.ScraperRepository
 import com.example.domain.repository.SettingsRepository
-import com.example.domain.repository.TaskRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DatabaseModule {
+object NetworkAndDatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): FlowDayDatabase {
-        return Room.databaseBuilder(
-            context,
-            FlowDayDatabase::class.java,
-            "flowday_planner.db"
-        ).fallbackToDestructiveMigration(dropAllTables = false)
+    fun provideOkHttpClient(): OkHttpClient {
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        }
+        return OkHttpClient.Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .connectTimeout(25, TimeUnit.SECONDS)
+            .readTimeout(35, TimeUnit.SECONDS)
+            .writeTimeout(35, TimeUnit.SECONDS)
+            .addInterceptor(logging)
             .build()
     }
 
     @Provides
-    fun provideTaskDao(db: FlowDayDatabase): TaskDao = db.taskDao()
+    @Singleton
+    fun provideDatabase(@ApplicationContext context: Context): StreamGrabDatabase {
+        return Room.databaseBuilder(
+            context,
+            StreamGrabDatabase::class.java,
+            "streamgrab_db"
+        ).fallbackToDestructiveMigration().build()
+    }
 
     @Provides
-    fun provideTemplateDao(db: FlowDayDatabase): TemplateDao = db.templateDao()
+    fun provideDownloadDao(db: StreamGrabDatabase): DownloadDao = db.downloadDao()
 
     @Provides
-    fun provideRoutineDao(db: FlowDayDatabase): RoutineDao = db.routineDao()
-
-    @Provides
-    fun provideFocusDao(db: FlowDayDatabase): FocusDao = db.focusDao()
+    fun provideHistoryDao(db: StreamGrabDatabase): HistoryDao = db.historyDao()
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class RepositoryModule {
+abstract class RepositoryBindModule {
 
     @Binds
     @Singleton
-    abstract fun bindTaskRepository(impl: TaskRepositoryImpl): TaskRepository
+    abstract fun bindScraperRepository(impl: ScraperRepositoryImpl): ScraperRepository
 
     @Binds
     @Singleton
-    abstract fun bindRoutineRepository(impl: RoutineRepositoryImpl): RoutineRepository
+    abstract fun bindDownloadRepository(impl: DownloadRepositoryImpl): DownloadRepository
 
     @Binds
     @Singleton
-    abstract fun bindFocusRepository(impl: FocusRepositoryImpl): FocusRepository
+    abstract fun bindHistoryRepository(impl: HistoryRepositoryImpl): HistoryRepository
 
     @Binds
     @Singleton

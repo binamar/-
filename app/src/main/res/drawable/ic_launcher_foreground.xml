@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/ic_flowday_foreground_1795524744094"
+        android:drawable="@drawable/ic_streamgrab_foreground_1795530404165"
         android:gravity="center" />
 </layer-list>

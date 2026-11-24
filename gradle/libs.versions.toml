@@ -45,10 +45,12 @@ androidxHilt = "1.2.0"
 workRuntimeKtx = "2.10.1"
 kotlinxSerializationJson = "1.8.1"
 desugarJdkLibs = "2.1.5"
+jsoup = "1.18.3"
 
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

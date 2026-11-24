@@ -2,10 +2,8 @@ package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.AppLanguage
-import com.example.domain.model.DarkContrastMode
-import com.example.domain.model.ThemeMode
-import com.example.domain.model.UserPreferences
+import com.example.domain.model.QualityPreferencePolicy
+import com.example.domain.model.ScraperSettings
 import com.example.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,38 +17,38 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    val preferences: StateFlow<UserPreferences> = settingsRepository.preferencesFlow
+    val settings: StateFlow<ScraperSettings> = settingsRepository.settings
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = UserPreferences()
+            initialValue = ScraperSettings()
         )
 
-    fun setThemeMode(mode: ThemeMode) {
-        viewModelScope.launch { settingsRepository.updateThemeMode(mode) }
+    fun updateQualityPolicy(policy: QualityPreferencePolicy) = viewModelScope.launch {
+        settingsRepository.updateQualityPolicy(policy)
     }
 
-    fun setDarkContrast(contrast: DarkContrastMode) {
-        viewModelScope.launch { settingsRepository.updateDarkContrast(contrast) }
+    fun updateMaxConcurrent(count: Int) = viewModelScope.launch {
+        settingsRepository.updateMaxConcurrent(count)
     }
 
-    fun setFontScale(scale: Float) {
-        viewModelScope.launch { settingsRepository.updateFontScale(scale) }
+    fun updateInterDelay(seconds: Int) = viewModelScope.launch {
+        settingsRepository.updateInterDownloadDelay(seconds)
     }
 
-    fun setMinimalistMode(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.updateMinimalistMode(enabled) }
+    fun updateAutoRetry(count: Int) = viewModelScope.launch {
+        settingsRepository.updateAutoRetryCount(count)
     }
 
-    fun setLanguage(language: AppLanguage) {
-        viewModelScope.launch { settingsRepository.updateLanguage(language) }
+    fun updatePreferSubtitles(enabled: Boolean) = viewModelScope.launch {
+        settingsRepository.updatePreferSubtitles(enabled)
     }
 
-    fun setGroupedRoutineReminders(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.updateGroupedRoutineReminders(enabled) }
+    fun updateUserAgent(ua: String) = viewModelScope.launch {
+        settingsRepository.updateUserAgent(ua)
     }
 
-    fun setSmartSnoozeMinutes(minutes: Int) {
-        viewModelScope.launch { settingsRepository.updateSmartSnoozeMinutes(minutes) }
+    fun updateDarkTheme(dark: Boolean) = viewModelScope.launch {
+        settingsRepository.updateDarkTheme(dark)
     }
 }

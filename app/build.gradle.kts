@@ -15,7 +15,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.flowday.kqmxpw"
+    applicationId = "com.aistudio.streamgrab.vxrmqt"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -114,16 +114,17 @@ dependencies {
   implementation(libs.androidx.hilt.work)
   implementation(libs.androidx.hilt.navigation.compose)
   implementation(libs.kotlinx.serialization.json)
-  // implementation(libs.coil.compose)
+  implementation(libs.coil.compose)
+  implementation(libs.jsoup)
   // implementation(libs.converter.moshi)
   // implementation(libs.firebase.ai)
   // implementation(libs.firebase.appcheck.recaptcha)
   // implementation(libs.firebase.appcheck.debug)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
-  // implementation(libs.logging.interceptor)
+  implementation(libs.logging.interceptor)
   // implementation(libs.moshi.kotlin)
-  // implementation(libs.okhttp)
+  implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   // implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)

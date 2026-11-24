@@ -4,131 +4,78 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
-import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface TaskDao {
-    @Transaction
-    @Query("SELECT * FROM tasks ORDER BY isCompleted ASC, priority DESC, dueTimeMinuteOfDay ASC, createdAt DESC")
-    fun observeAllTasks(): Flow<List<TaskWithSubtasks>>
+interface DownloadDao {
+    @Query("SELECT * FROM download_tasks ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<DownloadEntity>>
 
-    @Transaction
-    @Query("SELECT * FROM tasks WHERE dueDateEpochDay = :epochDay ORDER BY isCompleted ASC, priority DESC, dueTimeMinuteOfDay ASC, createdAt DESC")
-    fun observeTasksForDate(epochDay: Long): Flow<List<TaskWithSubtasks>>
+    @Query("SELECT * FROM download_tasks WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): DownloadEntity?
 
-    @Transaction
-    @Query("SELECT * FROM tasks WHERE isCompleted = 0 AND dueDateEpochDay IS NOT NULL AND dueDateEpochDay < :todayEpochDay ORDER BY dueDateEpochDay ASC, priority DESC")
-    fun observeOverdueIncompleteTasks(todayEpochDay: Long): Flow<List<TaskWithSubtasks>>
+    @Query("SELECT * FROM download_tasks WHERE status IN ('QUEUED', 'RESOLVING', 'DOWNLOADING') ORDER BY createdAt ASC")
+    suspend fun getPendingOrActive(): List<DownloadEntity>
 
-    @Transaction
-    @Query("SELECT * FROM tasks WHERE isCompleted = 0 AND (dueDateEpochDay IS NULL OR (dueTimeMinuteOfDay IS NULL AND timeBlock = 'ANYTIME')) ORDER BY priority DESC, createdAt DESC")
-    fun observeUnscheduledTasks(): Flow<List<TaskWithSubtasks>>
+    @Query("SELECT COUNT(*) FROM download_tasks WHERE status IN ('RESOLVING', 'DOWNLOADING')")
+    suspend fun countActive(): Int
 
-    @Transaction
-    @Query("SELECT * FROM tasks WHERE id = :id")
-    suspend fun getTaskById(id: Long): TaskWithSubtasks?
+    @Query("SELECT * FROM download_tasks WHERE status = 'QUEUED' ORDER BY createdAt ASC LIMIT :limit")
+    suspend fun getNextQueued(limit: Int): List<DownloadEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTask(task: TaskEntity): Long
+    suspend fun insert(entity: DownloadEntity): Long
 
-    @Update
-    suspend fun updateTask(task: TaskEntity)
+    @Query(
+        "UPDATE download_tasks SET downloadedBytes = :downloaded, expectedSizeBytes = :expectedSize, speedBytesPerSec = :speed, supportsRange = :supportsRange, updatedAt = :updatedAt WHERE id = :id"
+    )
+    suspend fun updateProgress(
+        id: Long,
+        downloaded: Long,
+        expectedSize: Long,
+        speed: Long,
+        supportsRange: Boolean,
+        updatedAt: Long
+    )
 
-    @Query("UPDATE tasks SET isCompleted = :completed, completedAt = :completedAt WHERE id = :taskId")
-    suspend fun updateCompletion(taskId: Long, completed: Boolean, completedAt: Long?)
+    @Query("UPDATE download_tasks SET status = :status, errorMessage = :errorMessage, speedBytesPerSec = 0, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateStatus(id: Long, status: String, errorMessage: String?, updatedAt: Long)
 
-    @Query("UPDATE tasks SET dueDateEpochDay = :targetEpochDay, postponeCount = postponeCount + 1 WHERE id IN (:taskIds)")
-    suspend fun rolloverTasks(taskIds: List<Long>, targetEpochDay: Long)
+    @Query("UPDATE download_tasks SET directUrl = :directUrl, headersJson = :headersJson, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateDirectUrl(id: Long, directUrl: String, headersJson: String, updatedAt: Long)
 
-    @Query("UPDATE tasks SET dueDateEpochDay = :targetEpochDay, timeBlock = :timeBlock, dueTimeMinuteOfDay = :minuteOfDay WHERE id = :taskId")
-    suspend fun rescheduleTask(taskId: Long, targetEpochDay: Long?, timeBlock: String, minuteOfDay: Int?)
+    @Query(
+        "UPDATE download_tasks SET status = 'COMPLETED', localUri = :localUri, downloadedBytes = :downloadedBytes, expectedSizeBytes = :downloadedBytes, speedBytesPerSec = 0, errorMessage = NULL, updatedAt = :updatedAt WHERE id = :id"
+    )
+    suspend fun markCompleted(id: Long, localUri: String, downloadedBytes: Long, updatedAt: Long)
 
-    @Query("DELETE FROM tasks WHERE id = :taskId")
-    suspend fun deleteTask(taskId: Long)
+    @Query("UPDATE download_tasks SET retryCount = retryCount + 1, status = 'QUEUED', errorMessage = NULL, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun resetForRetry(id: Long, updatedAt: Long)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSubtask(subtask: SubtaskEntity): Long
+    @Query("UPDATE download_tasks SET status = 'PAUSED', speedBytesPerSec = 0, updatedAt = :updatedAt WHERE status IN ('QUEUED', 'RESOLVING', 'DOWNLOADING')")
+    suspend fun pauseAllActive(updatedAt: Long)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSubtasks(subtasks: List<SubtaskEntity>)
+    @Query("UPDATE download_tasks SET status = 'QUEUED', errorMessage = NULL, updatedAt = :updatedAt WHERE status = 'PAUSED'")
+    suspend fun resumeAllPaused(updatedAt: Long)
 
-    @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM subtasks WHERE taskId = :taskId")
-    suspend fun nextSubtaskOrder(taskId: Long): Int
+    @Query("DELETE FROM download_tasks WHERE status IN ('COMPLETED', 'CANCELLED')")
+    suspend fun clearFinished()
 
-    @Query("UPDATE subtasks SET isCompleted = :completed WHERE id = :subtaskId")
-    suspend fun updateSubtaskCompletion(subtaskId: Long, completed: Boolean)
-
-    @Query("UPDATE subtasks SET sortOrder = :sortOrder WHERE id = :subtaskId")
-    suspend fun updateSubtaskOrder(subtaskId: Long, sortOrder: Int)
-
-    @Query("DELETE FROM subtasks WHERE id = :subtaskId")
-    suspend fun deleteSubtask(subtaskId: Long)
-
-    @Query("DELETE FROM subtasks WHERE taskId = :taskId")
-    suspend fun deleteSubtasksForTask(taskId: Long)
+    @Query("DELETE FROM download_tasks WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }
 
 @Dao
-interface TemplateDao {
-    @Query("SELECT * FROM task_templates ORDER BY isBuiltIn DESC, id ASC")
-    fun observeTemplates(): Flow<List<TaskTemplateEntity>>
+interface HistoryDao {
+    @Query("SELECT * FROM resolved_history ORDER BY createdAt DESC LIMIT 50")
+    fun observeHistory(): Flow<List<ResolvedHistoryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTemplate(template: TaskTemplateEntity): Long
+    suspend fun insert(entity: ResolvedHistoryEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertTemplates(templates: List<TaskTemplateEntity>)
+    @Query("DELETE FROM resolved_history WHERE id = :id")
+    suspend fun deleteById(id: Long)
 
-    @Query("DELETE FROM task_templates WHERE id = :id")
-    suspend fun deleteTemplate(id: Long)
-
-    @Query("SELECT COUNT(*) FROM task_templates")
-    suspend fun countTemplates(): Int
-}
-
-@Dao
-interface RoutineDao {
-    @Query("SELECT * FROM routines ORDER BY isPaused ASC, reminderMinuteOfDay ASC, createdAt ASC")
-    fun observeAllRoutines(): Flow<List<RoutineEntity>>
-
-    @Query("SELECT * FROM routines")
-    suspend fun getAllRoutinesOnce(): List<RoutineEntity>
-
-    @Query("SELECT * FROM routines WHERE id = :id")
-    suspend fun getRoutineById(id: Long): RoutineEntity?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertRoutine(routine: RoutineEntity): Long
-
-    @Query("UPDATE routines SET isPaused = :paused, pausedUntilEpochDay = :pausedUntil WHERE id = :routineId")
-    suspend fun setPaused(routineId: Long, paused: Boolean, pausedUntil: Long?)
-
-    @Query("DELETE FROM routines WHERE id = :routineId")
-    suspend fun deleteRoutine(routineId: Long)
-
-    @Query("SELECT * FROM routine_logs")
-    fun observeAllLogs(): Flow<List<RoutineLogEntity>>
-
-    @Query("SELECT * FROM routine_logs WHERE routineId = :routineId AND dateEpochDay = :epochDay LIMIT 1")
-    suspend fun findLog(routineId: Long, epochDay: Long): RoutineLogEntity?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertLog(log: RoutineLogEntity)
-
-    @Query("DELETE FROM routine_logs WHERE routineId = :routineId AND dateEpochDay = :epochDay")
-    suspend fun deleteLog(routineId: Long, epochDay: Long)
-}
-
-@Dao
-interface FocusDao {
-    @Query("SELECT * FROM focus_sessions ORDER BY completedAt DESC")
-    fun observeAllSessions(): Flow<List<FocusSessionEntity>>
-
-    @Query("SELECT * FROM focus_sessions WHERE taskId = :taskId ORDER BY completedAt DESC")
-    fun observeSessionsForTask(taskId: Long): Flow<List<FocusSessionEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSession(session: FocusSessionEntity): Long
+    @Query("DELETE FROM resolved_history")
+    suspend fun clearAll()
 }

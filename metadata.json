@@ -1,6 +1,6 @@
 {
-  "name": "FlowDay Planner",
-  "description": "An offline-first Android daily planner and routine manager built with Kotlin and Jetpack Compose, designed for fast task entry, flexible routines, focus timers, and low-friction productivity.",
+  "name": "StreamGrab",
+  "description": "Independent Kotlin & Jetpack Compose smart link resolver, HTML/JS scraper (Doodstream & MixDrop), 360p quality inspector, and automated WorkManager + Room download queue manager.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
